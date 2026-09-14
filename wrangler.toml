@@ -25,11 +25,38 @@ SESSION_NAME = "lancement-2026"
 #   npx wrangler secret put ADMIN_TOKEN
 #   (ou, dans le tableau de bord : Settings > Variables and Secrets > Add > Secret)
 
-# Liste pré-chargée au tout premier démarrage (facultatif). Décommente et colle
-# tes anecdotes, une par ligne, avant de déployer : elles seront déjà en place à
-# l'ouverture de la page, sans rien saisir dans la régie. La pré-charge n'a lieu
-# qu'une fois ; ensuite, c'est la régie qui fait foi.
-# SEED_ANECDOTES = """
-# La réunion de crise de 7h qui s'est terminée en fou rire | Camille
-# Le client venu au rendez-vous avec sa mère | Yann
-# """
+# Les anecdotes de l'événement, pré-chargées au tout premier démarrage.
+# Anonymes : aucun auteur n'est associé, ni sur les téléphones ni à la projection.
+# La pré-charge n'a lieu qu'une fois ; ensuite, c'est la régie qui fait foi.
+SEED_ANECDOTES = '''
+Je suis apiculteur amateur.
+Je me suis mis au parachutisme.
+J'ai couru 4 marathons.
+J'ai auto-produit et distribué 2 albums et 1 clip de musique.
+Il m'aura fallu parcourir 5 000 km pour rencontrer quelqu'un qui vit littéralement dans la même rue que moi : le monde est plus petit qu'on ne croit.
+Avez-vous déjà voyagé avec 7 valises de 23 kg, 3 sacs à dos, une poussette et 2 enfants ? Moi oui…
+J'ai travaillé dans la police.
+J'ai déjà participé à un jeu télévisé sur une grande chaîne.
+J'ai fait la manche avec ma guitare et deux chanteuses près de la plage d'Hossegor. Jusqu'à ce qu'on soit stoppés par la police.
+J'ai décroché un job à New York alors que je ne parlais quasiment pas anglais… je vous laisse imaginer mes premières semaines.
+Lors d'un échange en Chine, je me suis retrouvé, sans parler un mot de chinois et après quelques (plusieurs, en vrai) verres, à improviser une opération de sauvetage pour récupérer deux amis retenus par des membres de la mafia locale.
+Je me suis déjà retrouvé nez à nez avec un requin.
+J'ai vu plus de 80 opéras et spectacles de danse en 10 ans.
+J'ai été concertiste jusqu'à mes 25 ans.
+On me surnomme « Million Dollar Lady ».
+Je suis fan de l'OL, né le même jour que son plus grand président Jean-Michel Aulas, et j'ai déjà déjeuné 2 fois face à lui.
+Je me suis retrouvé mis en joue en pleine mission d'audit bancaire.
+Je fais partie d'une chorale de chants du monde.
+Il ne m'aura pas fallu plus de 30 minutes pour me faire scammer lors d'un séjour en Inde.
+J'ai vécu 10 ans en Angleterre.
+J'ai gravi un sommet à plus de 4 800 m en chaussures de ville, sur un coup de tête.
+J'ai plusieurs titres sur toutes les plateformes de musique et mon premier album est prévu pour début 2027.
+J'ai été sélectionné pour une émission de téléréalité.
+On me prend régulièrement pour une locale quand je voyage, notamment en Norvège et en Irlande.
+Je me suis retrouvé épuisé physiquement parce que je voulais faire bonne impression en tant que stagiaire auprès de mes collègues.
+Mes collègues m'ont surpris à jouer de la guitare lors d'une réunion Teams, alors que je pensais être seul en attendant que la réunion commence.
+Je fais des agrès de gymnastique.
+Je suis passionné de basket et de NBA.
+J'ai sauté en parachute sur un coup de tête.
+J'ai récemment affronté un sumo en duel, et j'ai perdu.
+'''
