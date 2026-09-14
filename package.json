@@ -10,7 +10,7 @@
     "logs": "wrangler tail"
   },
   "devDependencies": {
-    "wrangler": "^4.0.0"
+    "wrangler": "^4.131.2"
   },
   "optionalDependencies": {
     "qrcode-generator": "^1.4.4"

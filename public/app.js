@@ -656,7 +656,8 @@
   /* ---------- logo officiel, s'il a été déposé dans public/ ---------- */
   function useOfficialLogo() {
     var img = el("brandLogo");
-    var candidates = ["/logo.svg", "/logo.png", "/logo.webp"];
+    var candidates = ["/logo.svg", "/logo.png", "/logo.webp", "/logo.jpg", "/logo.jpeg",
+                      "/logo.PNG", "/logo.SVG", "/logo.JPG"];
     var i = 0;
     img.addEventListener("load", function () {
       img.hidden = false;
