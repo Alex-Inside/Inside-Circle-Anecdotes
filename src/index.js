@@ -12,6 +12,9 @@ const MAX_TEXT = 400;
 const MAX_AUTHOR = 40;
 const PHASES = ["lobby", "vote", "results"];
 
+/** Repère de version : /api/state le renvoie, la page l'affiche en bas. */
+const VERSION = 4;
+
 const DEFAULTS = {
   phase: "lobby",
   title: "Battle d'anecdotes",
@@ -185,6 +188,7 @@ export class Poll {
         state: this.publicState(),
         myChoice: isVoterId(voter) ? this.data.votes[voter] || null : null,
         adminConfigured: Boolean(this.env.ADMIN_TOKEN),
+        version: VERSION,
       });
     }
 

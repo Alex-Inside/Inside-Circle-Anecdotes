@@ -10,12 +10,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400;1,700&family=Montserrat:wght@600;800&display=swap">
-<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/styles.css?v=4">
 </head>
 <body>
 
 <header class="masthead">
-  <div class="brand">
+  <div class="brand" id="brand">
+    <img id="brandLogo" class="brandlogo" alt="INSIDE CIRCLE" hidden>
     <svg class="ring" viewBox="0 0 64 64" aria-hidden="true">
       <defs>
         <linearGradient id="ic-ring" x1="0.02" y1="0.72" x2="0.98" y2="0.12"><stop offset="0%" stop-color="#150A8F"></stop><stop offset="32%" stop-color="#2A2ECA"></stop><stop offset="66%" stop-color="#1B8CE6"></stop><stop offset="100%" stop-color="#00E6F6"></stop></linearGradient>
@@ -23,7 +24,7 @@
       <path d="M 13.81 21.5 A 21 21 0 1 0 26.56 11.72" fill="none" stroke="url(#ic-ring)" stroke-width="12.5"></path>
       <path d="M 8.4 18.38 L 6.53 25.65 L 19.23 24.62 Z" fill="url(#ic-ring)"></path>
     </svg>
-    <span class="wordmark">Inside<br>Circle</span>
+    <span class="wordmark" id="wordmark">Inside<br>Circle</span>
   </div>
   <div class="live"><span class="dot" id="dot"></span><span id="liveLabel">Connexion…</span></div>
 </header>
@@ -124,6 +125,7 @@ Le client qui est venu au rendez-vous avec sa mère | Yann"></textarea>
     <button class="linkbtn" id="projectBtn">Projeter le QR code</button>
     <button class="linkbtn" id="regieBtn">Accès régie</button>
     <span class="muted" id="footNote"></span>
+    <span class="stamp" id="stamp">version 4</span>
   </footer>
 </main>
 
@@ -134,6 +136,6 @@ Le client qui est venu au rendez-vous avec sa mère | Yann"></textarea>
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="/app.js"></script>
+<script src="/app.js?v=4"></script>
 </body>
 </html>

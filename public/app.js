@@ -630,11 +630,31 @@
     if (code) tryAdmin(code.trim());
   });
 
+  /* ---------- logo officiel, s'il a été déposé dans public/ ---------- */
+  function useOfficialLogo() {
+    var img = el("brandLogo");
+    var candidates = ["/logo.svg", "/logo.png", "/logo.webp"];
+    var i = 0;
+    img.addEventListener("load", function () {
+      img.hidden = false;
+      var ring = document.querySelector(".ring");
+      if (ring) ring.hidden = true;
+      el("wordmark").hidden = true;   // le fichier officiel porte déjà le nom
+    });
+    img.addEventListener("error", function () {
+      i += 1;
+      if (i < candidates.length) img.src = candidates[i];
+    });
+    img.src = candidates[0];
+  }
+
   /* ---------- démarrage ---------- */
   (function boot() {
     var params = new URLSearchParams(location.search);
     var fromUrl = params.get("admin");
     var stored = ls("ic-admin", null);
+
+    useOfficialLogo();
 
     loadState().then(function () {
       openSocket();

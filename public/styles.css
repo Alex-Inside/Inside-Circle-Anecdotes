@@ -65,6 +65,11 @@ button,input,textarea{font:inherit;color:inherit}
 }
 .brand{display:flex;align-items:center;gap:12px}
 .ring{width:46px;height:46px;flex:0 0 auto}
+.brandlogo{height:52px;width:auto;display:block}
+.stamp{
+  margin-left:auto;font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--mist);opacity:.6;
+}
 .wordmark{
   font-family:var(--display);font-weight:800;font-size:19px;line-height:.98;
   letter-spacing:.005em;text-transform:uppercase;
