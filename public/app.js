@@ -661,8 +661,9 @@
     var i = 0;
     img.addEventListener("load", function () {
       img.hidden = false;
+      // Un SVG n'obéit pas à la propriété « hidden » : on passe par le style.
       var ring = document.querySelector(".ring");
-      if (ring) ring.hidden = true;
+      if (ring) ring.style.display = "none";
       el("wordmark").hidden = true;   // le fichier officiel porte déjà le nom
     });
     img.addEventListener("error", function () {

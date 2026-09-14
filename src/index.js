@@ -13,7 +13,7 @@ const MAX_AUTHOR = 40;
 const PHASES = ["lobby", "vote", "results"];
 
 /** Repère de version : /api/state le renvoie, la page l'affiche en bas. */
-const VERSION = 6;
+const VERSION = 7;
 
 /** Nombre d'anecdotes que chaque participant peut choisir. */
 const PICKS = 3;
