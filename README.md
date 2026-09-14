@@ -85,9 +85,11 @@ code s'adapte automatiquement.
    partout. Tu peux **+ 1 minute** si la salle traîne, ou **Clore maintenant**.
    Le panneau **Décompte en direct** te montre les scores pendant le vote —
    réservé à la régie, personne d'autre ne les voit.
-6. **3 · Révéler le Top 3** : tous les téléphones basculent en même temps sur le
-   podium, et l'écran de projection affiche le classement. Les égalités sont
-   signalées **ex æquo** : à toi de les départager en salle si un lot est en jeu.
+6. **3 · Écran du Top 3** : tous les écrans basculent sur le podium, les trois
+   places masquées par un point d'interrogation.
+7. **Révélation du podium** : un clic par place — la 3e, puis la 2e, puis la 1re.
+   Les participants ne voient **jamais** le nombre de voix ; le décompte reste
+   dans la régie. « Tout remasquer » permet de refaire l'effet.
 
 **Répétition générale** : fais un tour complet à blanc, puis
 **Effacer les votes** avant l'ouverture au public.
@@ -95,7 +97,10 @@ code s'adapte automatiquement.
 ## Détails utiles
 
 - **Trois choix par téléphone**, non ordonnés : chaque anecdote choisie prend
-  une voix. Le pourcentage affiché est la part des votants qui l'ont retenue.
+  une voix.
+- **Aucun score côté public.** Le serveur n'envoie que les places déjà
+  révélées, sans chiffre : impossible de savoir combien de voix une anecdote a
+  recueillies, même en interrogeant l'API. Seule la régie voit le décompte.
 - **Un bulletin par téléphone.** L'identifiant du votant est stocké dans le
   navigateur. C'est adapté à un événement — ce n'est pas un scrutin certifié :
   quelqu'un qui ouvre une navigation privée peut voter une seconde fois.

@@ -190,6 +190,12 @@
     Array.prototype.forEach.call(document.querySelectorAll("[data-phase]"), function (b) {
       b.classList.toggle("on", b.getAttribute("data-phase") === state.phase);
     });
+    var next = el("revealNext");
+    if (next) {
+      var steps = ["Révéler la 3e place", "Révéler la 2e place", "Révéler la 1re place", "Podium complet"];
+      next.textContent = steps[Math.min(3, state.reveal || 0)];
+      next.disabled = state.phase !== "results" || (state.reveal || 0) >= 3;
+    }
 
     if (document.activeElement !== el("titleInput")) el("titleInput").value = state.title;
     if (document.activeElement !== el("subtitleInput")) el("subtitleInput").value = state.subtitle || "";
@@ -292,8 +298,8 @@
       b.className = "option";
       var on = selection.indexOf(a.id) >= 0;
       b.setAttribute("aria-pressed", on ? "true" : "false");
-      b.innerHTML = '<span class="tick" aria-hidden="true">✓</span><span class="num">' + pad2(i + 1) +
-        '</span><span class="txt"></span>';
+      b.innerHTML = '<span class="ohead"><span class="num">' + pad2(i + 1) +
+        '</span><span class="tick" aria-hidden="true">✓</span></span><span class="txt"></span>';
       b.querySelector(".txt").textContent = a.text;
       b.disabled = closed;
       b.addEventListener("click", function () {
@@ -347,29 +353,43 @@
     body.appendChild(bar);
   }
 
-  function rankedRows(rows) {
-    var counts = {};
-    rows.forEach(function (r) { counts[r.votes] = (counts[r.votes] || 0) + 1; });
-    return rows.map(function (r) {
-      var a = anecdoteById(r.id);
-      return {
-        text: a ? a.text : "—",
-        author: a ? a.author : "",
-        votes: r.votes,
-        tied: counts[r.votes] > 1 && r.votes > 0
-      };
+  /** Les places révélées, par rang. Le public ne reçoit aucun décompte. */
+  function podiumByRank() {
+    var byRank = {};
+    (state.results || []).forEach(function (r) {
+      byRank[r.rank] = anecdoteById(r.id);
     });
+    return byRank;
+  }
+
+  function buildPodium(byRank) {
+    var podium = document.createElement("div");
+    podium.className = "podium";
+    [2, 1, 3].forEach(function (rank) {          // ordre visuel du podium
+      var a = byRank[rank];
+      var p = document.createElement("div");
+      p.className = "plinth" + (a ? "" : " masked");
+      p.setAttribute("data-rank", String(rank));
+      p.innerHTML = (rank === 1 && a ? '<div class="crown">Anecdote préférée</div>' : "") +
+        '<div class="pos">' + rank + '</div>' +
+        (a ? '<div class="txt"></div>' : '<div class="qmark" aria-label="pas encore révélé">?</div>');
+      if (a) p.querySelector(".txt").textContent = a.text;
+      podium.appendChild(p);
+    });
+    return podium;
   }
 
   function renderResults() {
+    var byRank = podiumByRank();
+    var shown = Object.keys(byRank).length;
+
     el("stageTitle").textContent = "Le Top 3";
     el("stageMeter").textContent = plural(state.voters, "votant", "votants");
 
     var body = el("stageBody");
     body.innerHTML = "";
 
-    var rows = rankedRows(state.results || []);
-    if (!rows.length || state.voters === 0) {
+    if (!state.anecdotes.length || state.voters === 0) {
       var hold = document.createElement("div");
       hold.className = "hold";
       hold.innerHTML = "<strong>Pas encore de votes</strong><span>Le classement s'affichera ici.</span>";
@@ -377,52 +397,13 @@
       return;
     }
 
-    body.appendChild(buildPodium(rows, state.voters));
-
-    if (rows.length > 3) {
-      var h = document.createElement("div");
-      h.className = "subhd";
-      h.textContent = "Le reste du classement";
-      body.appendChild(h);
-      var others = document.createElement("div");
-      others.className = "others";
-      rows.slice(3).forEach(function (r, i) {
-        var line = document.createElement("div");
-        line.className = "line";
-        line.innerHTML = '<span class="pos">' + pad2(i + 4) + '</span><span class="txt"></span><span class="sc"></span>';
-        line.querySelector(".txt").textContent = r.text;
-        line.querySelector(".sc").textContent = plural(r.votes, "vote", "votes") +
-          (r.tied ? " · ex æquo" : "");
-        others.appendChild(line);
-      });
-      body.appendChild(others);
+    if (shown === 0) {
+      var wait = document.createElement("div");
+      wait.className = "note";
+      wait.textContent = "Roulement de tambour… le podium se dévoile dans un instant.";
+      body.appendChild(wait);
     }
-  }
-
-  function buildPodium(rows, total) {
-    var top = rows.slice(0, 3);
-    var max = top.length ? top[0].votes || 1 : 1;
-    var podium = document.createElement("div");
-    podium.className = "podium";
-    [1, 0, 2].forEach(function (i) {
-      if (!top[i]) return;
-      var r = top[i];
-      var p = document.createElement("div");
-      p.className = "plinth";
-      p.setAttribute("data-rank", String(i + 1));
-      p.innerHTML = (i === 0 ? '<div class="crown">Anecdote préférée</div>' : '') +
-        '<div class="pos">' + (i + 1) + '</div><div class="txt"></div>' +
-        '<div class="sc"></div><div class="gauge"><i></i></div>';
-      p.querySelector(".txt").textContent = r.text;
-      p.querySelector(".sc").textContent = plural(r.votes, "vote", "votes") +
-        (total ? " · " + Math.round((r.votes / total) * 100) + "% des votants" : "") +
-        (r.tied ? " · ex æquo" : "");
-      podium.appendChild(p);
-      requestAnimationFrame(function () {
-        p.querySelector(".gauge > i").style.width = Math.round((r.votes / max) * 100) + "%";
-      });
-    });
-    return podium;
+    body.appendChild(buildPodium(byRank));
   }
 
   /* ---------- QR code ---------- */
@@ -463,8 +444,7 @@
     if (state && state.phase === "results") {
       box.innerHTML = '<div class="kicker">Inside Circle</div><div class="huge"></div>';
       box.querySelector(".huge").textContent = "Le Top 3";
-      var rows = rankedRows(state.results || []);
-      if (rows.length) box.appendChild(buildPodium(rows, state.voters));
+      box.appendChild(buildPodium(podiumByRank()));
       var t = document.createElement("div");
       t.className = "tally";
       t.textContent = plural(state.voters, "votant", "votants");
@@ -590,6 +570,13 @@
       var payload = { phase: phase };
       if (phase === "vote") payload.minutes = Number(el("minutes").value);
       adminPost("/api/admin/phase", payload);
+    });
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll("[data-reveal]"), function (b) {
+    b.addEventListener("click", function () {
+      var action = b.getAttribute("data-reveal");
+      adminPost("/api/admin/reveal", action === "reset" ? { action: "reset" } : {});
     });
   });
 

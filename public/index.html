@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400;1,700&family=Montserrat:wght@600;800&display=swap">
-<link rel="stylesheet" href="/styles.css?v=7">
+<link rel="stylesheet" href="/styles.css?v=8">
 </head>
 <body>
 
@@ -63,8 +63,17 @@
         <div class="row">
           <button class="btn ghost" data-phase="lobby">1 · Salle d'attente</button>
           <button class="btn ghost" data-phase="vote">2 · Ouvrir le vote</button>
-          <button class="btn ghost" data-phase="results">3 · Révéler le Top 3</button>
+          <button class="btn ghost" data-phase="results">3 · Écran du Top 3</button>
         </div>
+      </div>
+
+      <div class="group">
+        <h3>Révélation du podium</h3>
+        <div class="row">
+          <button class="btn" id="revealNext" data-reveal="next">Révéler la 3e place</button>
+          <button class="btn ghost" data-reveal="reset">Tout remasquer</button>
+        </div>
+        <p class="muted">Un clic par place : la 3e, puis la 2e, puis la 1re. Les participants ne voient jamais le nombre de voix — toi seul, dans « Décompte en direct ».</p>
       </div>
 
       <div class="group">
@@ -125,7 +134,7 @@ Le client qui est venu au rendez-vous avec sa mère | Yann"></textarea>
     <button class="linkbtn" id="projectBtn">Projeter le QR code</button>
     <button class="linkbtn" id="regieBtn">Accès régie</button>
     <span class="muted" id="footNote"></span>
-    <span class="stamp" id="stamp">version 7</span>
+    <span class="stamp" id="stamp">version 8</span>
   </footer>
 </main>
 
@@ -136,6 +145,6 @@ Le client qui est venu au rendez-vous avec sa mère | Yann"></textarea>
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="/app.js?v=7"></script>
+<script src="/app.js?v=8"></script>
 </body>
 </html>

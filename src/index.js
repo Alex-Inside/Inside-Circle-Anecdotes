@@ -13,7 +13,7 @@ const MAX_AUTHOR = 40;
 const PHASES = ["lobby", "vote", "results"];
 
 /** Repère de version : /api/state le renvoie, la page l'affiche en bas. */
-const VERSION = 7;
+const VERSION = 8;
 
 /** Nombre d'anecdotes que chaque participant peut choisir. */
 const PICKS = 3;
@@ -25,6 +25,7 @@ const DEFAULTS = {
   anecdotes: [],
   votes: {},
   voteEndsAt: 0,   // 0 = pas de minuterie
+  reveal: 0,       // 0 = rien de révélé, 1 = la 3e place, 2 = la 2e, 3 = la 1re
   updatedAt: 0,
 };
 
@@ -152,9 +153,27 @@ export class Poll {
       picks: PICKS,
       remainingMs: this.remainingMs(),
       closed: this.data.phase === "vote" && this.isClosed(),
-      results: this.data.phase === "results" ? this.tally() : null,
+      reveal: this.data.reveal || 0,
+      results: this.data.phase === "results" ? this.revealed() : null,
       updatedAt: this.data.updatedAt,
     };
+  }
+
+  /**
+   * Les places révélées, sans le moindre chiffre : personne ne doit savoir
+   * combien de voix son anecdote a recueillies. Seule la régie voit le
+   * décompte, via /api/admin/check.
+   */
+  revealed() {
+    const top = this.tally().slice(0, 3);
+    const steps = Math.max(0, Math.min(3, this.data.reveal || 0));
+    const out = [];
+    for (let i = 0; i < steps; i += 1) {
+      const rank = 3 - i;              // on dévoile la 3e place, puis la 2e, puis la 1re
+      const row = top[rank - 1];
+      if (row) out.push({ id: row.id, rank: rank });
+    }
+    return out;
   }
 
   broadcast() {
@@ -262,6 +281,7 @@ export class Poll {
           return json({ error: "no_anecdotes", message: "Enregistre d'abord la liste des anecdotes." }, 400);
         }
         this.data.phase = body.phase;
+        this.data.reveal = 0;   // toute bascule de phase remasque le podium
         if (body.phase === "vote") {
           // Ouvrir le vote arme la minuterie ; 0 minute = pas de limite.
           const minutes = body.minutes === undefined ? VOTE_MINUTES_DEFAULT : Number(body.minutes);
@@ -310,6 +330,17 @@ export class Poll {
         return json({ ok: true, state: this.publicState() });
       }
 
+      if (path === "/api/admin/reveal" && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        if (this.data.phase !== "results") {
+          return json({ error: "wrong_phase", message: "Passe d'abord à l'écran du Top 3." }, 409);
+        }
+        if (body.action === "reset") this.data.reveal = 0;
+        else this.data.reveal = Math.min(3, (this.data.reveal || 0) + 1);
+        await this.save();
+        return json({ ok: true, state: this.publicState() });
+      }
+
       if (path === "/api/admin/timer" && request.method === "POST") {
         const body = await request.json().catch(() => ({}));
         if (body.action === "stop") {
@@ -344,6 +375,7 @@ export class Poll {
           this.data.votes = {};
           this.data.phase = "lobby";
           this.data.voteEndsAt = 0;
+          this.data.reveal = 0;
         } else {
           this.data.votes = {};
         }
