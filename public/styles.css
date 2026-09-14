@@ -162,6 +162,11 @@ button,input,textarea{font:inherit;color:inherit}
   font-size:13px;color:transparent;
 }
 .option[aria-pressed="true"] .tick{background:var(--cyan);border-color:var(--cyan);color:#06213A}
+.pick-label{
+  font-family:var(--display);font-weight:700;font-size:11px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--mist);
+}
+.option[aria-pressed="true"] .pick-label{color:var(--cyan)}
 .option .num{
   font-family:var(--display);font-weight:700;font-size:11.5px;letter-spacing:.08em;
   color:var(--mist);font-variant-numeric:tabular-nums;

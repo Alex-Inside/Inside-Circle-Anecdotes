@@ -96,6 +96,12 @@ code s'adapte automatiquement.
 
 ## Détails utiles
 
+- **Ordre personnel.** Chaque téléphone affiche les anecdotes dans un ordre
+  tiré au sort, stable pour toute la session : sans cela, les premières de la
+  liste seraient mécaniquement avantagées. Le mélange est calculé sur le
+  téléphone à partir de son identifiant, donc la liste ne bouge jamais sous le
+  pouce, même quand le serveur envoie une mise à jour. La régie, elle, garde
+  l'ordre d'origine.
 - **Trois choix par téléphone**, non ordonnés : chaque anecdote choisie prend
   une voix.
 - **Aucun score côté public.** Le serveur n'envoie que les places déjà

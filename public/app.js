@@ -60,6 +60,45 @@
     return state.anecdotes.filter(function (a) { return a.id === id; })[0] || null;
   }
 
+  /* ---------- ordre personnel des anecdotes ----------
+   * Chaque participant voit la liste dans un ordre différent : sans cela, les
+   * premières anecdotes seraient mécaniquement avantagées. L'ordre est tiré au
+   * sort à partir de l'identifiant du téléphone, donc il reste le MÊME pendant
+   * toute la session — la liste ne doit pas se remélanger sous le pouce à
+   * chaque mise à jour reçue du serveur.
+   */
+  function seedFrom(text) {
+    var h = 2166136261;
+    for (var i = 0; i < text.length; i += 1) {
+      h ^= text.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+  function seededRandom(seed) {
+    var a = seed;
+    return function () {
+      a = (a + 0x6D2B79F5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  var shuffleCache = { key: null, list: [] };
+  function shuffledAnecdotes() {
+    var ids = state.anecdotes.map(function (a) { return a.id; });
+    var key = ids.join(",");
+    if (shuffleCache.key === key) return shuffleCache.list;
+    var rand = seededRandom(seedFrom(voterId));
+    var list = state.anecdotes.slice();
+    for (var i = list.length - 1; i > 0; i -= 1) {   // mélange de Fisher-Yates
+      var j = Math.floor(rand() * (i + 1));
+      var tmp = list[i]; list[i] = list[j]; list[j] = tmp;
+    }
+    shuffleCache = { key: key, list: list };
+    return list;
+  }
+
   function api(path, options) {
     var opts = options || {};
     var headers = { "content-type": "application/json" };
@@ -285,21 +324,21 @@
       var note = document.createElement("div");
       note.className = "note";
       note.textContent = picks > 1
-        ? "Choisis jusqu'à " + picks + " anecdotes : la plus drôle, la plus intéressante, la plus originale. Les scores restent cachés jusqu'à la révélation du Top 3."
-        : "Une seule anecdote à choisir. Les scores restent cachés jusqu'à la révélation du Top 3.";
+        ? "Choisis jusqu'à " + picks + " anecdotes : la plus drôle, la plus intéressante, la plus originale. L'ordre d'affichage est différent pour chacun, et les scores restent cachés jusqu'à la révélation du Top 3."
+        : "Une seule anecdote à choisir. L'ordre d'affichage est différent pour chacun, et les scores restent cachés jusqu'à la révélation du Top 3.";
       body.appendChild(note);
     }
 
     var list = document.createElement("div");
     list.className = "options";
-    state.anecdotes.forEach(function (a, i) {
+    shuffledAnecdotes().forEach(function (a) {
       var b = document.createElement("button");
       b.type = "button";
       b.className = "option";
       var on = selection.indexOf(a.id) >= 0;
       b.setAttribute("aria-pressed", on ? "true" : "false");
-      b.innerHTML = '<span class="ohead"><span class="num">' + pad2(i + 1) +
-        '</span><span class="tick" aria-hidden="true">✓</span></span><span class="txt"></span>';
+      b.innerHTML = '<span class="ohead"><span class="pick-label">Choisir</span>' +
+        '<span class="tick" aria-hidden="true">✓</span></span><span class="txt"></span>';
       b.querySelector(".txt").textContent = a.text;
       b.disabled = closed;
       b.addEventListener("click", function () {
