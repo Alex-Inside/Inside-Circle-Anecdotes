@@ -18,8 +18,11 @@ const DEFAULTS = {
   subtitle: "INSIDE CIRCLE — Événement de lancement",
   anecdotes: [],
   votes: {},
+  voteEndsAt: 0,   // 0 = pas de minuterie
   updatedAt: 0,
 };
+
+const VOTE_MINUTES_DEFAULT = 5;
 
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -87,6 +90,19 @@ export class Poll {
     await this.save();
   }
 
+  /** Réveille le Durable Object à l'échéance, pour diffuser la clôture. */
+  async scheduleAlarm() {
+    if (this.data.voteEndsAt > Date.now()) {
+      await this.ctx.storage.setAlarm(this.data.voteEndsAt);
+    } else {
+      await this.ctx.storage.deleteAlarm();
+    }
+  }
+
+  async alarm() {
+    this.broadcast();
+  }
+
   async save() {
     this.data.updatedAt = Date.now();
     await this.ctx.storage.put("data", this.data);
@@ -103,6 +119,17 @@ export class Poll {
       .sort((x, y) => (y.votes !== x.votes ? y.votes - x.votes : x.order - y.order));
   }
 
+  /** Millisecondes restantes, ou null si aucune minuterie n'est armée. */
+  remainingMs() {
+    if (!this.data.voteEndsAt) return null;
+    return Math.max(0, this.data.voteEndsAt - Date.now());
+  }
+
+  /** Le scrutin est-il fermé par la minuterie ? */
+  isClosed() {
+    return Boolean(this.data.voteEndsAt) && Date.now() >= this.data.voteEndsAt;
+  }
+
   /** Ce que tout le monde a le droit de voir. Les scores restent cachés hors révélation. */
   publicState() {
     return {
@@ -111,6 +138,8 @@ export class Poll {
       subtitle: this.data.subtitle,
       anecdotes: this.data.anecdotes.map((a) => ({ id: a.id, text: a.text, author: a.author })),
       voters: Object.keys(this.data.votes).length,
+      remainingMs: this.remainingMs(),
+      closed: this.data.phase === "vote" && this.isClosed(),
       results: this.data.phase === "results" ? this.tally() : null,
       updatedAt: this.data.updatedAt,
     };
@@ -163,6 +192,9 @@ export class Poll {
       if (this.data.phase !== "vote") {
         return json({ error: "closed", message: "Le vote n'est pas ouvert." }, 409);
       }
+      if (this.isClosed()) {
+        return json({ error: "time_up", message: "Le temps est écoulé, le vote est clos." }, 409);
+      }
       const body = await request.json().catch(() => null);
       if (!body || !isVoterId(body.voter)) {
         return json({ error: "bad_request", message: "Identifiant de votant invalide." }, 400);
@@ -205,6 +237,15 @@ export class Poll {
           return json({ error: "no_anecdotes", message: "Enregistre d'abord la liste des anecdotes." }, 400);
         }
         this.data.phase = body.phase;
+        if (body.phase === "vote") {
+          // Ouvrir le vote arme la minuterie ; 0 minute = pas de limite.
+          const minutes = body.minutes === undefined ? VOTE_MINUTES_DEFAULT : Number(body.minutes);
+          const safe = Number.isFinite(minutes) ? Math.max(0, Math.min(60, minutes)) : VOTE_MINUTES_DEFAULT;
+          this.data.voteEndsAt = safe > 0 ? Date.now() + safe * 60000 : 0;
+          await this.scheduleAlarm();
+        } else {
+          this.data.voteEndsAt = 0;
+        }
         await this.save();
         return json({ ok: true, state: this.publicState() });
       }
@@ -242,6 +283,25 @@ export class Poll {
         return json({ ok: true, state: this.publicState() });
       }
 
+      if (path === "/api/admin/timer" && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        if (body.action === "stop") {
+          this.data.voteEndsAt = Date.now();          // clôture immédiate
+        } else if (body.action === "clear") {
+          this.data.voteEndsAt = 0;                   // vote sans limite de temps
+        } else {
+          const minutes = Number(body.minutes);
+          if (!Number.isFinite(minutes) || minutes === 0) {
+            return json({ error: "bad_request", message: "Durée invalide." }, 400);
+          }
+          const base = this.data.voteEndsAt && !this.isClosed() ? this.data.voteEndsAt : Date.now();
+          this.data.voteEndsAt = Math.max(Date.now(), base + minutes * 60000);
+        }
+        await this.scheduleAlarm();
+        await this.save();
+        return json({ ok: true, state: this.publicState() });
+      }
+
       if (path === "/api/admin/meta" && request.method === "POST") {
         const body = await request.json().catch(() => ({}));
         if (typeof body.title === "string") this.data.title = clean(body.title, 70) || DEFAULTS.title;
@@ -256,6 +316,7 @@ export class Poll {
           this.data.anecdotes = [];
           this.data.votes = {};
           this.data.phase = "lobby";
+          this.data.voteEndsAt = 0;
         } else {
           this.data.votes = {};
         }

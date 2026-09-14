@@ -18,14 +18,10 @@
   <div class="brand">
     <svg class="ring" viewBox="0 0 64 64" aria-hidden="true">
       <defs>
-        <linearGradient id="ic-ring" x1="0" y1="1" x2="1" y2="0">
-          <stop offset="0%" stop-color="#4A21D0"></stop>
-          <stop offset="45%" stop-color="#1E6FE0"></stop>
-          <stop offset="100%" stop-color="#2FD8E8"></stop>
-        </linearGradient>
+        <linearGradient id="ic-ring" x1="0.02" y1="0.72" x2="0.98" y2="0.12"><stop offset="0%" stop-color="#150A8F"></stop><stop offset="32%" stop-color="#2A2ECA"></stop><stop offset="66%" stop-color="#1B8CE6"></stop><stop offset="100%" stop-color="#00E6F6"></stop></linearGradient>
       </defs>
-      <path d="M 11.33 39.52 A 22 22 0 1 0 11.33 24.48" fill="none"
-            stroke="url(#ic-ring)" stroke-width="13" stroke-linecap="butt"></path>
+      <path d="M 13.81 21.5 A 21 21 0 1 0 26.56 11.72" fill="none" stroke="url(#ic-ring)" stroke-width="12.5"></path>
+      <path d="M 8.4 18.38 L 6.53 25.65 L 19.23 24.62 Z" fill="url(#ic-ring)"></path>
     </svg>
     <span class="wordmark">Inside<br>Circle</span>
   </div>
@@ -68,6 +64,26 @@
           <button class="btn ghost" data-phase="vote">2 · Ouvrir le vote</button>
           <button class="btn ghost" data-phase="results">3 · Révéler le Top 3</button>
         </div>
+      </div>
+
+      <div class="group">
+        <h3>Durée du vote</h3>
+        <div class="row">
+          <label class="lbl" for="minutes">Ouvrir pour</label>
+          <select id="minutes">
+            <option value="3">3 minutes</option>
+            <option value="5" selected>5 minutes</option>
+            <option value="7">7 minutes</option>
+            <option value="10">10 minutes</option>
+            <option value="0">sans limite</option>
+          </select>
+        </div>
+        <div class="row">
+          <button class="btn ghost" data-timer="1">+ 1 minute</button>
+          <button class="btn ghost" data-timer="-1">− 1 minute</button>
+          <button class="btn ghost danger" data-timer="stop">Clore maintenant</button>
+        </div>
+        <p class="muted">Le compte à rebours s'affiche sur les téléphones et sur l'écran de projection. À zéro, le serveur refuse les votes ; c'est toi qui révèles le Top 3.</p>
       </div>
 
       <div class="group">

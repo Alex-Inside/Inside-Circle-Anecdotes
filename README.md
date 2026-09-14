@@ -4,6 +4,15 @@ Sondage live pour un public ouvert : les participants scannent un QR code, ouvre
 la page sur leur téléphone, **choisissent une seule anecdote**, et le **Top 3** est
 révélé quand l'animateur le décide.
 
+En ligne : <https://inside-circle-anecdotes.alexandre-c3f.workers.dev/>
+
+**Le déroulé de l'activité.** À l'arrivée, chacun reçoit une anecdote sur papier
+et cherche à qui elle appartient : ça fait circuler les gens et ça lance les
+conversations. Après environ une heure et demie d'échanges, on projette le QR
+code et chacun vote pour l'anecdote la plus drôle, la plus intéressante ou la
+plus originale. **Le vote dure 5 minutes**, compte à rebours à l'écran. On révèle
+le Top 3 et les trois anecdotes gagnantes remportent un lot.
+
 Aucun compte, aucune connexion pour les participants : l'adresse est publique.
 
 - **Page publique** : servie par un Worker Cloudflare (HTML/CSS/JS statiques).
@@ -68,12 +77,17 @@ code s'adapte automatiquement.
 3. **Projeter le QR code** affiche un écran plein format aux couleurs INSIDE
    CIRCLE, avec le QR, l'adresse et le compteur de votes qui monte en direct.
    (Échap pour sortir.)
-4. Phase **1 · Salle d'attente** pendant que le public scanne, puis
-   **2 · Ouvrir le vote** quand tu as fini de raconter les anecdotes.
-   Le panneau **Décompte en direct** te montre les scores — réservé à la régie,
-   personne d'autre ne les voit.
-5. **3 · Révéler le Top 3** : tous les téléphones basculent en même temps sur le
-   podium, et l'écran de projection affiche le classement.
+4. Phase **1 · Salle d'attente** pendant que le public scanne le QR et arrive sur
+   la page. Laisse-la affichée le temps que la salle se connecte.
+5. **Durée du vote** : 5 minutes par défaut. Puis **2 · Ouvrir le vote** — le
+   compte à rebours démarre sur tous les téléphones et sur l'écran de
+   projection. À zéro, le serveur refuse les votes ; les boutons se bloquent
+   partout. Tu peux **+ 1 minute** si la salle traîne, ou **Clore maintenant**.
+   Le panneau **Décompte en direct** te montre les scores pendant le vote —
+   réservé à la régie, personne d'autre ne les voit.
+6. **3 · Révéler le Top 3** : tous les téléphones basculent en même temps sur le
+   podium, et l'écran de projection affiche le classement. Les égalités sont
+   signalées **ex æquo** : à toi de les départager en salle si un lot est en jeu.
 
 **Répétition générale** : fais un tour complet à blanc, puis
 **Effacer les votes** avant l'ouverture au public.
@@ -91,6 +105,11 @@ code s'adapte automatiquement.
   change `SESSION_NAME` dans `wrangler.toml` puis redéploie. Chaque nom
   correspond à une session indépendante.
 - **Limites** : 60 anecdotes, 400 caractères par anecdote.
+- **Anonymat** : aucune anecdote n'est attribuée. Ni sur les téléphones, ni sur
+  l'écran de projection, ni dans les données stockées.
+- **Minuterie** : l'échéance vit sur le serveur, pas sur les téléphones — une
+  horloge de téléphone déréglée ne donne pas de temps en plus. Le serveur
+  n'envoie qu'une durée restante, que chaque écran décompte localement.
 
 ## Développement local
 
@@ -112,6 +131,8 @@ déploiement de production.
 | `GET` | `/api/admin/check` | régie — état + décompte |
 | `POST` | `/api/admin/phase` | régie — `{phase: "lobby"\|"vote"\|"results"}` |
 | `POST` | `/api/admin/anecdotes` | régie — `{items: [{text, author}]}` |
+| `POST` | `/api/admin/phase` (vote) | régie — `{phase:"vote", minutes}` arme la minuterie |
+| `POST` | `/api/admin/timer` | régie — `{minutes}` ou `{action:"stop"\|"clear"}` |
 | `POST` | `/api/admin/meta` | régie — `{title, subtitle}` |
 | `POST` | `/api/admin/reset` | régie — `{scope: "votes"\|"all"}` |
 
@@ -125,7 +146,7 @@ Les couleurs et les typographies sont regroupées en tête de
 l'événement de lancement. Montserrat pour les titres, Lato pour le texte et les
 italiques de la signature.
 
-Le logo de l'en-tête est une **reconstitution** de l'anneau INSIDE CIRCLE en SVG
-(`public/index.html` et `public/favicon.svg`). Dépose le fichier officiel dans
-`public/` et remplace le `<svg class="ring">` par une `<img>` pour un rendu
-exact.
+L'anneau de l'en-tête est **redessiné en SVG** d'après le logo officiel
+(`public/index.html` et `public/favicon.svg`) : ouverture en haut à gauche,
+ergot, dégradé indigo → cyan. Pour un rendu au pixel près, dépose le fichier
+officiel dans `public/` et remplace le `<svg class="ring">` par une `<img>`.

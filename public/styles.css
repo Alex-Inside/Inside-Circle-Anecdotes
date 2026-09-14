@@ -256,6 +256,24 @@ textarea{line-height:1.5;min-height:150px}
 .peek .lab{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .peek .n{font-variant-numeric:tabular-nums;color:var(--mist);font-size:13px}
 
+/* ---------- compte à rebours ---------- */
+.clock{
+  display:inline-block;font-family:var(--display);font-weight:800;font-size:15px;
+  letter-spacing:.02em;color:var(--cyan);font-variant-numeric:tabular-nums;
+  background:rgba(47,216,232,.14);border:1px solid var(--cyan);border-radius:999px;
+  padding:1px 10px;margin-right:8px;
+}
+.clock.urgent{color:#FFD9A0;border-color:#FFB765;background:rgba(255,183,101,.16)}
+.clock-big{
+  font-family:var(--display);font-weight:800;font-variant-numeric:tabular-nums;
+  font-size:clamp(44px,11vw,120px);line-height:1;color:var(--cyan);letter-spacing:-.01em;
+}
+.clock-big.urgent{color:#FFB765}
+select{
+  background:rgba(4,10,45,.55);border:1px solid var(--edge-strong);border-radius:999px;
+  padding:7px 14px;color:var(--white);cursor:pointer;font-size:14px;
+}
+
 /* ---------- pied ---------- */
 .foot{display:flex;gap:16px;flex-wrap:wrap;align-items:center;padding-top:4px}
 .foot .muted{font-size:12.5px}

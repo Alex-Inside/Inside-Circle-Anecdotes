@@ -15,6 +15,8 @@
   var toastTimer = null;
   var bulkDirty = false;
   var qrDrawn = false;
+  var deadline = null;     // échéance locale, recalculée à chaque état reçu
+  var tickTimer = null;
 
   /* ---------- stockage local ---------- */
   function ls(k, d) { try { var v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }
@@ -35,6 +37,19 @@
     toastTimer = setTimeout(function () { t.hidden = true; }, 3000);
   }
   function plural(n, one, many) { return n + " " + (n > 1 ? many : one); }
+  function mmss(ms) {
+    var total = Math.max(0, Math.ceil(ms / 1000));
+    return Math.floor(total / 60) + ":" + (total % 60 < 10 ? "0" : "") + (total % 60);
+  }
+  /** Temps restant, compté localement depuis la dernière valeur du serveur. */
+  function remaining() {
+    if (deadline === null) return null;
+    return Math.max(0, deadline - Date.now());
+  }
+  function timeUp() {
+    var r = remaining();
+    return r !== null && r === 0;
+  }
   function pad2(n) { return (n < 10 ? "0" : "") + n; }
   function anecdoteById(id) {
     if (!state) return null;
@@ -71,7 +86,35 @@
 
   function applyState(next) {
     state = next;
+    // Le serveur envoie une durée, jamais une heure absolue : les horloges des
+    // téléphones ne sont pas fiables.
+    deadline = (next && typeof next.remainingMs === "number") ? Date.now() + next.remainingMs : null;
     render();
+    startTicking();
+  }
+
+  function startTicking() {
+    if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
+    if (deadline === null || !state || state.phase !== "vote") return;
+    tickTimer = setInterval(function () {
+      var node = el("clock");
+      var left = remaining();
+      if (node && left !== null) {
+        node.textContent = mmss(left);
+        node.classList.toggle("urgent", left <= 60000);
+      }
+      var big = el("clockBig");
+      if (big && left !== null) {
+        big.textContent = mmss(left);
+        big.classList.toggle("urgent", left <= 60000);
+      }
+      if (left === 0) {
+        clearInterval(tickTimer);
+        tickTimer = null;
+        render();
+        loadState();   // le serveur confirme la clôture
+      }
+    }, 1000);
   }
 
   function loadState() {
@@ -176,8 +219,18 @@
   }
 
   function renderVote() {
-    el("stageTitle").textContent = "Choisis ton anecdote préférée";
-    el("stageMeter").textContent = plural(state.voters, "vote", "votes");
+    var closed = state.closed || timeUp();
+    el("stageTitle").textContent = closed ? "Vote clos" : "Choisis ton anecdote préférée";
+    var left = remaining();
+    el("stageMeter").innerHTML = "";
+    if (left !== null) {
+      var clock = document.createElement("span");
+      clock.id = "clock";
+      clock.className = "clock" + (left <= 60000 ? " urgent" : "");
+      clock.textContent = mmss(left);
+      el("stageMeter").appendChild(clock);
+    }
+    el("stageMeter").appendChild(document.createTextNode(" " + plural(state.voters, "vote", "votes")));
 
     var body = el("stageBody");
     body.innerHTML = "";
@@ -188,6 +241,15 @@
       hold.innerHTML = "<strong>Bientôt</strong><span>Les anecdotes arrivent.</span>";
       body.appendChild(hold);
       return;
+    }
+
+    if (closed) {
+      var over = document.createElement("div");
+      over.className = "note";
+      over.textContent = myChoice
+        ? "Le temps est écoulé. Ton vote est bien enregistré — le Top 3 arrive."
+        : "Le temps est écoulé, le vote est clos. Le Top 3 arrive.";
+      body.appendChild(over);
     }
 
     if (myChoice) {
@@ -222,7 +284,9 @@
         by.textContent = "Par " + a.author;
         txt.appendChild(by);
       }
+      b.disabled = closed;
       b.addEventListener("click", function () {
+        if (closed) return;
         selection = (selection === a.id) ? null : a.id;
         renderVote();
       });
@@ -235,8 +299,8 @@
     var submit = document.createElement("button");
     submit.type = "button";
     submit.className = "btn big";
-    submit.textContent = myChoice ? "Changer mon vote" : "Valider mon vote";
-    submit.disabled = !selection || selection === myChoice;
+    submit.textContent = closed ? "Vote clos" : (myChoice ? "Changer mon vote" : "Valider mon vote");
+    submit.disabled = closed || !selection || selection === myChoice;
     submit.addEventListener("click", function () {
       submit.disabled = true;
       api("/api/vote", { method: "POST", body: { voter: voterId, choice: selection } })
@@ -253,15 +317,24 @@
     bar.appendChild(submit);
     var hint = document.createElement("span");
     hint.className = "muted";
-    hint.textContent = selection ? "Anecdote sélectionnée" : "Sélectionne une anecdote ci-dessus";
+    hint.textContent = closed
+      ? "Merci !"
+      : (selection ? "Anecdote sélectionnée" : "Sélectionne une anecdote ci-dessus");
     bar.appendChild(hint);
     body.appendChild(bar);
   }
 
   function rankedRows(rows) {
+    var counts = {};
+    rows.forEach(function (r) { counts[r.votes] = (counts[r.votes] || 0) + 1; });
     return rows.map(function (r) {
       var a = anecdoteById(r.id);
-      return { text: a ? a.text : "—", author: a ? a.author : "", votes: r.votes };
+      return {
+        text: a ? a.text : "—",
+        author: a ? a.author : "",
+        votes: r.votes,
+        tied: counts[r.votes] > 1 && r.votes > 0
+      };
     });
   }
 
@@ -295,7 +368,8 @@
         line.className = "line";
         line.innerHTML = '<span class="pos">' + pad2(i + 4) + '</span><span class="txt"></span><span class="sc"></span>';
         line.querySelector(".txt").textContent = r.text;
-        line.querySelector(".sc").textContent = plural(r.votes, "vote", "votes");
+        line.querySelector(".sc").textContent = plural(r.votes, "vote", "votes") +
+          (r.tied ? " · ex æquo" : "");
         others.appendChild(line);
       });
       body.appendChild(others);
@@ -319,7 +393,7 @@
       p.querySelector(".txt").textContent = r.text;
       p.querySelector(".sc").textContent = plural(r.votes, "vote", "votes") +
         (total ? " · " + Math.round((r.votes / total) * 100) + "%" : "") +
-        (r.author ? " · " + r.author : "");
+        (r.tied ? " · ex æquo" : "");
       podium.appendChild(p);
       requestAnimationFrame(function () {
         p.querySelector(".gauge > i").style.width = Math.round((r.votes / max) * 100) + "%";
@@ -375,9 +449,11 @@
       return;
     }
 
+    var left = remaining();
     box.innerHTML =
       '<div class="kicker">Inside Circle</div>' +
-      '<div class="huge">Scanne et vote</div>' +
+      '<div class="huge">' + (state && state.closed ? "Vote clos" : "Scanne et vote") + '</div>' +
+      (left === null ? "" : '<div class="clock-big" id="clockBig">' + mmss(left) + '</div>') +
       '<div class="qr" id="qrBox"></div>' +
       '<div class="url"></div>' +
       '<div class="tally"></div>';
@@ -487,7 +563,22 @@
   /* ---------- branchements ---------- */
   Array.prototype.forEach.call(document.querySelectorAll("[data-phase]"), function (b) {
     b.addEventListener("click", function () {
-      adminPost("/api/admin/phase", { phase: b.getAttribute("data-phase") });
+      var phase = b.getAttribute("data-phase");
+      var payload = { phase: phase };
+      if (phase === "vote") payload.minutes = Number(el("minutes").value);
+      adminPost("/api/admin/phase", payload);
+    });
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll("[data-timer]"), function (b) {
+    b.addEventListener("click", function () {
+      var v = b.getAttribute("data-timer");
+      if (v === "stop") {
+        if (!window.confirm("Clore le vote maintenant ?")) return;
+        adminPost("/api/admin/timer", { action: "stop" }, "Vote clos.");
+      } else {
+        adminPost("/api/admin/timer", { minutes: Number(v) }, "Temps ajusté.");
+      }
     });
   });
 
