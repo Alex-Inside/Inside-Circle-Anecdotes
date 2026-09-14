@@ -1,0 +1,18 @@
+{
+  "name": "inside-circle-anecdotes",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sondage d'anecdotes INSIDE CIRCLE : vote du public par QR code, Top 3 en direct.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "vendor": "node -e \"require('fs').copyFileSync('node_modules/qrcode-generator/qrcode.js','public/vendor/qrcode.js')\"",
+    "logs": "wrangler tail"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  },
+  "optionalDependencies": {
+    "qrcode-generator": "^1.4.4"
+  }
+}

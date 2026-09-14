@@ -1,0 +1,35 @@
+name = "inside-circle-anecdotes"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+# La page publique (HTML/CSS/JS) est servie directement par le Worker.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+# Tout l'état de la session vit dans un seul Durable Object.
+[[durable_objects.bindings]]
+name = "POLL"
+class_name = "Poll"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Poll"]
+
+[vars]
+# Change ce nom pour repartir d'une session vierge sans rien effacer de l'ancienne
+# (utile pour un second événement : "lancement-2026", "session-2", ...).
+SESSION_NAME = "lancement-2026"
+
+# Le code de la régie n'est PAS ici : c'est un secret.
+#   npx wrangler secret put ADMIN_TOKEN
+#   (ou, dans le tableau de bord : Settings > Variables and Secrets > Add > Secret)
+
+# Liste pré-chargée au tout premier démarrage (facultatif). Décommente et colle
+# tes anecdotes, une par ligne, avant de déployer : elles seront déjà en place à
+# l'ouverture de la page, sans rien saisir dans la régie. La pré-charge n'a lieu
+# qu'une fois ; ensuite, c'est la régie qui fait foi.
+# SEED_ANECDOTES = """
+# La réunion de crise de 7h qui s'est terminée en fou rire | Camille
+# Le client venu au rendez-vous avec sa mère | Yann
+# """
