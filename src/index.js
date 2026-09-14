@@ -13,7 +13,10 @@ const MAX_AUTHOR = 40;
 const PHASES = ["lobby", "vote", "results"];
 
 /** Repère de version : /api/state le renvoie, la page l'affiche en bas. */
-const VERSION = 4;
+const VERSION = 5;
+
+/** Nombre d'anecdotes que chaque participant peut choisir. */
+const PICKS = 3;
 
 const DEFAULTS = {
   phase: "lobby",
@@ -69,6 +72,9 @@ export class Poll {
     ctx.blockConcurrencyWhile(async () => {
       const stored = await ctx.storage.get("data");
       if (stored) this.data = { ...DEFAULTS, ...stored };
+      for (const [voter, choice] of Object.entries(this.data.votes)) {
+        if (!Array.isArray(choice)) this.data.votes[voter] = choice ? [choice] : [];
+      }
     });
   }
 
@@ -114,8 +120,10 @@ export class Poll {
 
   tally() {
     const counts = new Map(this.data.anecdotes.map((a) => [a.id, 0]));
-    for (const choice of Object.values(this.data.votes)) {
-      if (counts.has(choice)) counts.set(choice, counts.get(choice) + 1);
+    for (const choices of Object.values(this.data.votes)) {
+      for (const choice of choices) {
+        if (counts.has(choice)) counts.set(choice, counts.get(choice) + 1);
+      }
     }
     return this.data.anecdotes
       .map((a, index) => ({ id: a.id, votes: counts.get(a.id) || 0, order: index }))
@@ -141,6 +149,7 @@ export class Poll {
       subtitle: this.data.subtitle,
       anecdotes: this.data.anecdotes.map((a) => ({ id: a.id, text: a.text, author: a.author })),
       voters: Object.keys(this.data.votes).length,
+      picks: PICKS,
       remainingMs: this.remainingMs(),
       closed: this.data.phase === "vote" && this.isClosed(),
       results: this.data.phase === "results" ? this.tally() : null,
@@ -186,7 +195,7 @@ export class Poll {
       const voter = url.searchParams.get("voter");
       return json({
         state: this.publicState(),
-        myChoice: isVoterId(voter) ? this.data.votes[voter] || null : null,
+        myChoices: isVoterId(voter) ? this.data.votes[voter] || [] : [],
         adminConfigured: Boolean(this.env.ADMIN_TOKEN),
         version: VERSION,
       });
@@ -203,18 +212,30 @@ export class Poll {
       if (!body || !isVoterId(body.voter)) {
         return json({ error: "bad_request", message: "Identifiant de votant invalide." }, 400);
       }
-      const exists = this.data.anecdotes.some((a) => a.id === body.choice);
-      if (!exists) {
-        return json({ error: "unknown_choice", message: "Cette anecdote n'est plus en lice." }, 400);
+      // On accepte une liste de choix ; l'ancien format à choix unique reste valide.
+      const asked = Array.isArray(body.choices) ? body.choices : (body.choice ? [body.choice] : []);
+      const choices = [];
+      for (const id of asked) {
+        if (choices.indexOf(id) === -1) choices.push(id);
+      }
+      if (choices.length === 0 || choices.length > PICKS) {
+        return json(
+          { error: "bad_choices", message: `Choisis entre 1 et ${PICKS} anecdotes.` },
+          400
+        );
+      }
+      const known = new Set(this.data.anecdotes.map((a) => a.id));
+      if (!choices.every((id) => known.has(id))) {
+        return json({ error: "unknown_choice", message: "Une des anecdotes n'est plus en lice." }, 400);
       }
       const now = Date.now();
       if (now - (this.lastWrite.get(body.voter) || 0) < 700) {
         return json({ error: "slow_down", message: "Doucement, un vote à la fois." }, 429);
       }
       this.lastWrite.set(body.voter, now);
-      this.data.votes[body.voter] = body.choice;
+      this.data.votes[body.voter] = choices;
       await this.save();
-      return json({ ok: true, myChoice: body.choice, state: this.publicState() });
+      return json({ ok: true, myChoices: choices, state: this.publicState() });
     }
 
     if (path.startsWith("/api/admin/")) {
@@ -280,8 +301,10 @@ export class Poll {
         this.data.anecdotes = items;
         // Un vote pour une anecdote disparue ne compte plus : on le retire.
         const alive = new Set(items.map((a) => a.id));
-        for (const [voter, choice] of Object.entries(this.data.votes)) {
-          if (!alive.has(choice)) delete this.data.votes[voter];
+        for (const [voter, choices] of Object.entries(this.data.votes)) {
+          const kept = choices.filter((id) => alive.has(id));
+          if (kept.length) this.data.votes[voter] = kept;
+          else delete this.data.votes[voter];
         }
         await this.save();
         return json({ ok: true, state: this.publicState() });
@@ -356,9 +379,15 @@ export default {
       return env.POLL.get(id).fetch(request);
     }
 
-    const asset = await env.ASSETS.fetch(request);
+    let asset = await env.ASSETS.fetch(request);
     if (asset.status === 404) {
-      return env.ASSETS.fetch(new Request(new URL("/index.html", url), request));
+      asset = await env.ASSETS.fetch(new Request(new URL("/index.html", url), request));
+    }
+    const type = asset.headers.get("content-type") || "";
+    if (type.includes("text/html")) {
+      const fresh = new Response(asset.body, asset);
+      fresh.headers.set("cache-control", "no-store, must-revalidate");
+      return fresh;
     }
     return asset;
   },

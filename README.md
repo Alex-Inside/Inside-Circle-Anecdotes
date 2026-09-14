@@ -1,7 +1,7 @@
 # Battle d'anecdotes — INSIDE CIRCLE
 
 Sondage live pour un public ouvert : les participants scannent un QR code, ouvrent
-la page sur leur téléphone, **choisissent une seule anecdote**, et le **Top 3** est
+la page sur leur téléphone, **choisissent jusqu'à 3 anecdotes**, et le **Top 3** est
 révélé quand l'animateur le décide.
 
 En ligne : <https://inside-circle-anecdotes.alexandre-c3f.workers.dev/>
@@ -9,8 +9,8 @@ En ligne : <https://inside-circle-anecdotes.alexandre-c3f.workers.dev/>
 **Le déroulé de l'activité.** À l'arrivée, chacun reçoit une anecdote sur papier
 et cherche à qui elle appartient : ça fait circuler les gens et ça lance les
 conversations. Après environ une heure et demie d'échanges, on projette le QR
-code et chacun vote pour l'anecdote la plus drôle, la plus intéressante ou la
-plus originale. **Le vote dure 5 minutes**, compte à rebours à l'écran. On révèle
+code et chacun choisit jusqu'à 3 anecdotes : la plus drôle, la plus
+intéressante, la plus originale. **Le vote dure 5 minutes**, compte à rebours à l'écran. On révèle
 le Top 3 et les trois anecdotes gagnantes remportent un lot.
 
 Aucun compte, aucune connexion pour les participants : l'adresse est publique.
@@ -94,7 +94,9 @@ code s'adapte automatiquement.
 
 ## Détails utiles
 
-- **Un vote par téléphone.** L'identifiant du votant est stocké dans le
+- **Trois choix par téléphone**, non ordonnés : chaque anecdote choisie prend
+  une voix. Le pourcentage affiché est la part des votants qui l'ont retenue.
+- **Un bulletin par téléphone.** L'identifiant du votant est stocké dans le
   navigateur. C'est adapté à un événement — ce n'est pas un scrutin certifié :
   quelqu'un qui ouvre une navigation privée peut voter une seconde fois.
 - **Changer d'avis** est permis tant que le vote est ouvert ; la révélation ferme
@@ -127,7 +129,7 @@ déploiement de production.
 |---|---|---|
 | `GET` | `/api/state?voter=<id>` | tout le monde |
 | `GET` | `/api/ws` | tout le monde (WebSocket, diffusion de l'état) |
-| `POST` | `/api/vote` | tout le monde — `{voter, choice}` |
+| `POST` | `/api/vote` | tout le monde — `{voter, choices: [id, …]}` (3 max) |
 | `GET` | `/api/admin/check` | régie — état + décompte |
 | `POST` | `/api/admin/phase` | régie — `{phase: "lobby"\|"vote"\|"results"}` |
 | `POST` | `/api/admin/anecdotes` | régie — `{items: [{text, author}]}` |

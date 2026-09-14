@@ -6,8 +6,8 @@
   var el = function (id) { return document.getElementById(id); };
 
   var state = null;        // dernier état reçu du serveur
-  var myChoice = null;     // anecdote déjà votée par ce téléphone
-  var selection = null;    // sélection en cours, pas encore validée
+  var myChoices = [];      // anecdotes déjà votées depuis ce téléphone
+  var selection = null;    // sélection en cours (liste), pas encore validée
   var adminToken = null;
   var tally = null;        // décompte réservé à la régie
   var socket = null;
@@ -51,6 +51,10 @@
     return r !== null && r === 0;
   }
   function pad2(n) { return (n < 10 ? "0" : "") + n; }
+  function sameSet(a, b) {
+    if (!a || !b || a.length !== b.length) return false;
+    return a.every(function (id) { return b.indexOf(id) >= 0; });
+  }
   function anecdoteById(id) {
     if (!state) return null;
     return state.anecdotes.filter(function (a) { return a.id === id; })[0] || null;
@@ -119,8 +123,8 @@
 
   function loadState() {
     return api("/api/state?voter=" + encodeURIComponent(voterId)).then(function (data) {
-      myChoice = data.myChoice;
-      if (selection === null) selection = myChoice;
+      myChoices = data.myChoices || [];
+      if (selection === null) selection = myChoices.slice();
       el("footNote").textContent = data.adminConfigured ? "" : "Code régie non configuré sur ce déploiement.";
       applyState(data.state);
       setLive(true, "En direct");
@@ -219,8 +223,14 @@
   }
 
   function renderVote() {
+    var picks = state.picks || 1;
     var closed = state.closed || timeUp();
-    el("stageTitle").textContent = closed ? "Vote clos" : "Choisis ton anecdote préférée";
+    if (selection === null) selection = myChoices.slice();
+
+    el("stageTitle").textContent = closed
+      ? "Vote clos"
+      : (picks > 1 ? "Choisis tes " + picks + " anecdotes préférées" : "Choisis ton anecdote préférée");
+
     var left = remaining();
     el("stageMeter").innerHTML = "";
     if (left !== null) {
@@ -230,7 +240,7 @@
       clock.textContent = mmss(left);
       el("stageMeter").appendChild(clock);
     }
-    el("stageMeter").appendChild(document.createTextNode(" " + plural(state.voters, "vote", "votes")));
+    el("stageMeter").appendChild(document.createTextNode(" " + plural(state.voters, "votant", "votants")));
 
     var body = el("stageBody");
     body.innerHTML = "";
@@ -246,24 +256,31 @@
     if (closed) {
       var over = document.createElement("div");
       over.className = "note";
-      over.textContent = myChoice
+      over.textContent = myChoices.length
         ? "Le temps est écoulé. Ton vote est bien enregistré — le Top 3 arrive."
         : "Le temps est écoulé, le vote est clos. Le Top 3 arrive.";
       body.appendChild(over);
     }
 
-    if (myChoice) {
-      var picked = anecdoteById(myChoice);
+    if (myChoices.length) {
       var done = document.createElement("div");
       done.className = "voted";
-      done.innerHTML = '<span class="lead">Vote enregistré</span><span class="pick"></span>' +
-        '<span class="muted">Tu peux encore changer d\'avis tant que le vote est ouvert.</span>';
-      done.querySelector(".pick").textContent = picked ? "Ton choix : " + picked.text : "Ton choix n'est plus en lice.";
+      done.innerHTML = '<span class="lead">Vote enregistré</span><ul class="picks"></ul>' +
+        (closed ? "" : '<span class="muted">Tu peux encore changer d\'avis tant que le vote est ouvert.</span>');
+      var ul = done.querySelector(".picks");
+      myChoices.forEach(function (id) {
+        var a = anecdoteById(id);
+        var li = document.createElement("li");
+        li.textContent = a ? a.text : "Anecdote retirée";
+        ul.appendChild(li);
+      });
       body.appendChild(done);
-    } else {
+    } else if (!closed) {
       var note = document.createElement("div");
       note.className = "note";
-      note.textContent = "Une seule anecdote à choisir. Les scores restent cachés jusqu'à la révélation du Top 3.";
+      note.textContent = picks > 1
+        ? "Choisis jusqu'à " + picks + " anecdotes : la plus drôle, la plus intéressante, la plus originale. Les scores restent cachés jusqu'à la révélation du Top 3."
+        : "Une seule anecdote à choisir. Les scores restent cachés jusqu'à la révélation du Top 3.";
       body.appendChild(note);
     }
 
@@ -273,21 +290,23 @@
       var b = document.createElement("button");
       b.type = "button";
       b.className = "option";
-      b.setAttribute("aria-pressed", selection === a.id ? "true" : "false");
+      var on = selection.indexOf(a.id) >= 0;
+      b.setAttribute("aria-pressed", on ? "true" : "false");
       b.innerHTML = '<span class="tick" aria-hidden="true">✓</span><span class="num">' + pad2(i + 1) +
         '</span><span class="txt"></span>';
-      var txt = b.querySelector(".txt");
-      txt.textContent = a.text;
-      if (a.author) {
-        var by = document.createElement("span");
-        by.className = "by";
-        by.textContent = "Par " + a.author;
-        txt.appendChild(by);
-      }
+      b.querySelector(".txt").textContent = a.text;
       b.disabled = closed;
       b.addEventListener("click", function () {
         if (closed) return;
-        selection = (selection === a.id) ? null : a.id;
+        var at = selection.indexOf(a.id);
+        if (at >= 0) {
+          selection.splice(at, 1);
+        } else if (selection.length >= picks) {
+          toast(picks + " anecdotes maximum. Désélectionne-en une d'abord.");
+          return;
+        } else {
+          selection.push(a.id);
+        }
         renderVote();
       });
       list.appendChild(b);
@@ -299,13 +318,17 @@
     var submit = document.createElement("button");
     submit.type = "button";
     submit.className = "btn big";
-    submit.textContent = closed ? "Vote clos" : (myChoice ? "Changer mon vote" : "Valider mon vote");
-    submit.disabled = closed || !selection || selection === myChoice;
+    var unchanged = sameSet(selection, myChoices);
+    submit.textContent = closed
+      ? "Vote clos"
+      : (myChoices.length ? "Changer mon vote" : (selection.length > 1 ? "Valider mes " + selection.length + " choix" : "Valider mon vote"));
+    submit.disabled = closed || selection.length === 0 || unchanged;
     submit.addEventListener("click", function () {
       submit.disabled = true;
-      api("/api/vote", { method: "POST", body: { voter: voterId, choice: selection } })
+      api("/api/vote", { method: "POST", body: { voter: voterId, choices: selection.slice() } })
         .then(function (data) {
-          myChoice = data.myChoice;
+          myChoices = data.myChoices || [];
+          selection = myChoices.slice();
           applyState(data.state);
           toast("Vote enregistré. Merci !");
         })
@@ -319,7 +342,7 @@
     hint.className = "muted";
     hint.textContent = closed
       ? "Merci !"
-      : (selection ? "Anecdote sélectionnée" : "Sélectionne une anecdote ci-dessus");
+      : selection.length + " / " + picks + (selection.length > 1 ? " sélectionnées" : " sélectionnée");
     bar.appendChild(hint);
     body.appendChild(bar);
   }
@@ -392,7 +415,7 @@
         '<div class="sc"></div><div class="gauge"><i></i></div>';
       p.querySelector(".txt").textContent = r.text;
       p.querySelector(".sc").textContent = plural(r.votes, "vote", "votes") +
-        (total ? " · " + Math.round((r.votes / total) * 100) + "%" : "") +
+        (total ? " · " + Math.round((r.votes / total) * 100) + "% des votants" : "") +
         (r.tied ? " · ex æquo" : "");
       podium.appendChild(p);
       requestAnimationFrame(function () {
@@ -607,14 +630,14 @@
 
   el("resetVotes").addEventListener("click", function () {
     if (!window.confirm("Effacer tous les votes ? Les anecdotes sont conservées.")) return;
-    myChoice = null;
+    myChoices = [];
     selection = null;
     adminPost("/api/admin/reset", { scope: "votes" }, "Votes effacés.");
   });
 
   el("resetAll").addEventListener("click", function () {
     if (!window.confirm("Tout effacer : anecdotes et votes. Cette action est définitive.")) return;
-    myChoice = null;
+    myChoices = [];
     selection = null;
     adminPost("/api/admin/reset", { scope: "all" }, "Session remise à zéro.");
   });

@@ -212,7 +212,8 @@ button,input,textarea{font:inherit;color:inherit}
   padding:16px 18px;display:flex;flex-direction:column;gap:8px;
 }
 .voted .lead{font-family:var(--display);font-weight:800;text-transform:uppercase;font-size:17px;color:var(--cyan)}
-.voted .pick{overflow-wrap:anywhere}
+.voted .picks{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.voted .picks li{overflow-wrap:anywhere}
 
 /* ---------- podium ---------- */
 .podium{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
